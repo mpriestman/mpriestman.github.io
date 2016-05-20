@@ -8943,15 +8943,6 @@ var _user$project$Model$toState = F2(
 var _user$project$Model$nukesForLevel = function (level) {
 	return 9 + level;
 };
-var _user$project$Model$scoreCity = F2(
-	function (city, model) {
-		var score$ = model.score + 500;
-		var cities$ = A2(_elm_lang$core$List$drop, 1, model.cities);
-		var citiesScored$ = A2(_elm_lang$core$List_ops['::'], city, model.citiesScored);
-		return _elm_lang$core$Native_Utils.update(
-			model,
-			{citiesScored: citiesScored$, cities: cities$, score: score$});
-	});
 var _user$project$Model$numMissilesLeft = function (model) {
 	return _elm_lang$core$List$sum(
 		A2(
@@ -8961,6 +8952,17 @@ var _user$project$Model$numMissilesLeft = function (model) {
 			},
 			model.bases));
 };
+var _user$project$Model$scoreForCity = 100;
+var _user$project$Model$scoreCity = F2(
+	function (city, model) {
+		var score$ = model.score + _user$project$Model$scoreForCity;
+		var cities$ = A2(_elm_lang$core$List$drop, 1, model.cities);
+		var citiesScored$ = A2(_elm_lang$core$List_ops['::'], city, model.citiesScored);
+		return _elm_lang$core$Native_Utils.update(
+			model,
+			{citiesScored: citiesScored$, cities: cities$, score: score$});
+	});
+var _user$project$Model$scoreForMissile = 5;
 var _user$project$Model$scoreMissile = function (model) {
 	var base = _user$project$Model$firstNonEmptyBase(model);
 	var bases$ = A2(_user$project$Model$maybeRemoveMissile, base, model.bases);
@@ -8973,7 +8975,7 @@ var _user$project$Model$scoreMissile = function (model) {
 		}
 	}();
 	var missilesScored$ = model.missilesScored + numMissiles;
-	var score$ = model.score + (numMissiles * 50);
+	var score$ = model.score + (numMissiles * _user$project$Model$scoreForMissile);
 	return _elm_lang$core$Native_Utils.update(
 		model,
 		{score: score$, missilesScored: missilesScored$, bases: bases$});
@@ -9127,9 +9129,11 @@ var _user$project$Model$subscriptions = function (model) {
 	switch (_p14.ctor) {
 		case 'Playing':
 			return _elm_lang$animation_frame$AnimationFrame$diffs(_user$project$Model$Frame);
-		case 'LevelIntro':
+		case 'StartScreen':
 			return _elm_lang$keyboard$Keyboard$presses(_user$project$Model$KeyPress);
 		case 'LevelEnd':
+			return _elm_lang$keyboard$Keyboard$presses(_user$project$Model$KeyPress);
+		case 'BonusPoints':
 			return A2(
 				_elm_lang$core$Time$every,
 				_user$project$Model$scoringInterval(model),
@@ -9204,10 +9208,27 @@ var _user$project$Model$gameOver = function (model) {
 		});
 };
 var _user$project$Model$LevelEnd = {ctor: 'LevelEnd'};
+var _user$project$Model$scoreCities = function (model) {
+	var _p17 = _elm_lang$core$List$head(model.cities);
+	if (_p17.ctor === 'Just') {
+		return A2(_user$project$Model$scoreCity, _p17._0, model);
+	} else {
+		return A2(_user$project$Model$toState, _user$project$Model$LevelEnd, model);
+	}
+};
+var _user$project$Model$updateBonus = function (model) {
+	var _p18 = _user$project$Model$numMissilesLeft(model);
+	if (_p18 === 0) {
+		return _user$project$Model$scoreCities(model);
+	} else {
+		return _user$project$Model$scoreMissile(model);
+	}
+};
+var _user$project$Model$BonusPoints = {ctor: 'BonusPoints'};
 var _user$project$Model$endLevel = function (model) {
 	return _elm_lang$core$Native_Utils.update(
 		model,
-		{state: _user$project$Model$LevelEnd});
+		{state: _user$project$Model$BonusPoints});
 };
 var _user$project$Model$nextStep = function (model) {
 	return _user$project$Model$isGameOver(model) ? _user$project$Model$gameOver(model) : (_user$project$Model$isLevelOver(model) ? _user$project$Model$endLevel(model) : _user$project$Model$stepModel(model));
@@ -9244,56 +9265,13 @@ var _user$project$Model$nextLevel = function (model) {
 };
 var _user$project$Model$keyPress = F2(
 	function (key, model) {
-		var _p17 = key;
-		if (_p17 === 13) {
+		var _p19 = key;
+		if (_p19 === 13) {
 			return _user$project$Model$nextLevel(model);
 		} else {
 			return model;
 		}
 	});
-var _user$project$Model$LevelIntro = {ctor: 'LevelIntro'};
-var _user$project$Model$defaultModel = {
-	missiles: _elm_lang$core$Native_List.fromArray(
-		[]),
-	nukes: _elm_lang$core$Native_List.fromArray(
-		[]),
-	explosions: _elm_lang$core$Native_List.fromArray(
-		[]),
-	bases: _user$project$Model$defaultBases,
-	cities: _elm_lang$core$Native_List.fromArray(
-		[]),
-	nukesLeft: 10,
-	countdown: 0,
-	level: 0,
-	state: _user$project$Model$LevelIntro,
-	score: 0,
-	citiesScored: _elm_lang$core$List$reverse(_user$project$Model$defaultCities),
-	missilesScored: 0
-};
-var _user$project$Model$init = {
-	ctor: '_Tuple2',
-	_0: _user$project$Model$defaultModel,
-	_1: A2(
-		_elm_lang$core$Random$generate,
-		_user$project$Model$NextCountdown,
-		A2(_elm_lang$core$Random$int, 10, 100))
-};
-var _user$project$Model$scoreCities = function (model) {
-	var _p18 = _elm_lang$core$List$head(model.cities);
-	if (_p18.ctor === 'Just') {
-		return A2(_user$project$Model$scoreCity, _p18._0, model);
-	} else {
-		return A2(_user$project$Model$toState, _user$project$Model$LevelIntro, model);
-	}
-};
-var _user$project$Model$updateScoring = function (model) {
-	var _p19 = _user$project$Model$numMissilesLeft(model);
-	if (_p19 === 0) {
-		return _user$project$Model$scoreCities(model);
-	} else {
-		return _user$project$Model$scoreMissile(model);
-	}
-};
 var _user$project$Model$update = F2(
 	function (msg, model) {
 		var _p20 = msg;
@@ -9301,7 +9279,7 @@ var _user$project$Model$update = F2(
 			case 'Tick':
 				return {
 					ctor: '_Tuple2',
-					_0: _user$project$Model$updateScoring(model),
+					_0: _user$project$Model$updateBonus(model),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
 			case 'Frame':
@@ -9337,7 +9315,26 @@ var _user$project$Model$update = F2(
 				};
 		}
 	});
-var _user$project$Model$Intro = {ctor: 'Intro'};
+var _user$project$Model$StartScreen = {ctor: 'StartScreen'};
+var _user$project$Model$defaultModel = {
+	missiles: _elm_lang$core$Native_List.fromArray(
+		[]),
+	nukes: _elm_lang$core$Native_List.fromArray(
+		[]),
+	explosions: _elm_lang$core$Native_List.fromArray(
+		[]),
+	bases: _user$project$Model$defaultBases,
+	cities: _elm_lang$core$Native_List.fromArray(
+		[]),
+	nukesLeft: 10,
+	countdown: 0,
+	level: 0,
+	state: _user$project$Model$StartScreen,
+	score: 0,
+	citiesScored: _elm_lang$core$List$reverse(_user$project$Model$defaultCities),
+	missilesScored: 0
+};
+var _user$project$Model$init = {ctor: '_Tuple2', _0: _user$project$Model$defaultModel, _1: _user$project$Model$countdownCommand};
 
 var _user$project$View$getClickPos = A3(
 	_elm_lang$core$Json_Decode$object2,
@@ -9376,6 +9373,72 @@ var _user$project$View$viewGameOver = function (model) {
 			_user$project$View$centeredText('GAME OVER')
 		]);
 };
+var _user$project$View$missileBonusScore = function (model) {
+	var score = model.missilesScored * _user$project$Model$scoreForMissile;
+	return A2(
+		_elm_lang$svg$Svg$text$,
+		_elm_lang$core$Native_List.fromArray(
+			[
+				_elm_lang$svg$Svg_Attributes$x('250'),
+				_elm_lang$svg$Svg_Attributes$y('150'),
+				_elm_lang$svg$Svg_Attributes$textAnchor('middle'),
+				_elm_lang$svg$Svg_Attributes$fill('yellow')
+			]),
+		_elm_lang$core$Native_List.fromArray(
+			[
+				_elm_lang$svg$Svg$text(
+				_elm_lang$core$Basics$toString(score))
+			]));
+};
+var _user$project$View$cityBonusScore = function (model) {
+	var score = _elm_lang$core$List$length(model.citiesScored) * _user$project$Model$scoreForCity;
+	return A2(
+		_elm_lang$svg$Svg$text$,
+		_elm_lang$core$Native_List.fromArray(
+			[
+				_elm_lang$svg$Svg_Attributes$x('250'),
+				_elm_lang$svg$Svg_Attributes$y('200'),
+				_elm_lang$svg$Svg_Attributes$textAnchor('middle'),
+				_elm_lang$svg$Svg_Attributes$fill('yellow')
+			]),
+		_elm_lang$core$Native_List.fromArray(
+			[
+				_elm_lang$svg$Svg$text(
+				_elm_lang$core$Basics$toString(score))
+			]));
+};
+var _user$project$View$viewBonusMessage = _elm_lang$core$Native_List.fromArray(
+	[
+		A2(
+		_elm_lang$svg$Svg$text$,
+		_elm_lang$core$Native_List.fromArray(
+			[
+				_elm_lang$svg$Svg_Attributes$x('400'),
+				_elm_lang$svg$Svg_Attributes$y('100'),
+				_elm_lang$svg$Svg_Attributes$textAnchor('middle'),
+				_elm_lang$svg$Svg_Attributes$fill('blue')
+			]),
+		_elm_lang$core$Native_List.fromArray(
+			[
+				_elm_lang$svg$Svg$text('BONUS POINTS')
+			]))
+	]);
+var _user$project$View$viewContinueMessage = _elm_lang$core$Native_List.fromArray(
+	[
+		A2(
+		_elm_lang$svg$Svg$text$,
+		_elm_lang$core$Native_List.fromArray(
+			[
+				_elm_lang$svg$Svg_Attributes$x('400'),
+				_elm_lang$svg$Svg_Attributes$y('256'),
+				_elm_lang$svg$Svg_Attributes$textAnchor('middle'),
+				_elm_lang$svg$Svg_Attributes$fill('blue')
+			]),
+		_elm_lang$core$Native_List.fromArray(
+			[
+				_elm_lang$svg$Svg$text('PRESS ENTER TO CONTINUE')
+			]))
+	]);
 var _user$project$View$renderScore = function (model) {
 	return A2(
 		_elm_lang$svg$Svg$text$,
@@ -9398,14 +9461,36 @@ var _user$project$View$viewScore = function (model) {
 			_user$project$View$renderScore(model)
 		]);
 };
-var _user$project$View$levelCaption = function (model) {
-	return _user$project$View$centeredText('PRESS ENTER TO START');
-};
-var _user$project$View$viewStartLevel = function (model) {
-	return _elm_lang$core$Native_List.fromArray(
+var _user$project$View$startMessage = A2(
+	_elm_lang$svg$Svg$text$,
+	_elm_lang$core$Native_List.fromArray(
 		[
-			_user$project$View$levelCaption(model)
-		]);
+			_elm_lang$svg$Svg_Attributes$x('400'),
+			_elm_lang$svg$Svg_Attributes$y('250'),
+			_elm_lang$svg$Svg_Attributes$textAnchor('middle'),
+			_elm_lang$svg$Svg_Attributes$fill('blue')
+		]),
+	_elm_lang$core$Native_List.fromArray(
+		[
+			_elm_lang$svg$Svg$text('PRESS ENTER TO START')
+		]));
+var _user$project$View$gameTitle = A2(
+	_elm_lang$svg$Svg$text$,
+	_elm_lang$core$Native_List.fromArray(
+		[
+			_elm_lang$svg$Svg_Attributes$x('400'),
+			_elm_lang$svg$Svg_Attributes$y('150'),
+			_elm_lang$svg$Svg_Attributes$textAnchor('middle'),
+			_elm_lang$svg$Svg_Attributes$fontSize('30'),
+			_elm_lang$svg$Svg_Attributes$fill('blue')
+		]),
+	_elm_lang$core$Native_List.fromArray(
+		[
+			_elm_lang$svg$Svg$text('MISSILE COMMAND')
+		]));
+var _user$project$View$viewStartScreen = function (_p0) {
+	return _elm_lang$core$Native_List.fromArray(
+		[_user$project$View$gameTitle, _user$project$View$startMessage]);
 };
 var _user$project$View$beginButton = A2(
 	_elm_lang$svg$Svg$rect,
@@ -9449,36 +9534,38 @@ var _user$project$View$viewExplosion = function (exp) {
 		_elm_lang$core$Native_List.fromArray(
 			[]));
 };
-var _user$project$View$baseCaptionText = function (base) {
-	return _elm_lang$core$Native_Utils.eq(base.numMissiles, 0) ? _elm_lang$core$Maybe$Just('OUT') : ((_elm_lang$core$Native_Utils.cmp(base.numMissiles, 3) < 1) ? _elm_lang$core$Maybe$Just('LOW') : _elm_lang$core$Maybe$Nothing);
-};
-var _user$project$View$baseCaption = function (base) {
-	var text = _user$project$View$baseCaptionText(base);
-	var _p0 = text;
-	if (_p0.ctor === 'Just') {
-		return _elm_lang$core$Native_List.fromArray(
-			[
-				A2(
-				_elm_lang$svg$Svg$text$,
-				_elm_lang$core$Native_List.fromArray(
-					[
-						_elm_lang$svg$Svg_Attributes$x(
-						_elm_lang$core$Basics$toString(base.position.x)),
-						_elm_lang$svg$Svg_Attributes$y(
-						_elm_lang$core$Basics$toString(base.position.y + 50)),
-						_elm_lang$svg$Svg_Attributes$textAnchor('middle'),
-						_elm_lang$svg$Svg_Attributes$fill('blue')
-					]),
-				_elm_lang$core$Native_List.fromArray(
-					[
-						_elm_lang$svg$Svg$text(_p0._0)
-					]))
-			]);
-	} else {
-		return _elm_lang$core$Native_List.fromArray(
-			[]);
-	}
-};
+var _user$project$View$baseCaptionText = F2(
+	function (model, base) {
+		return _elm_lang$core$Native_Utils.eq(model.state, _user$project$Model$Playing) ? (_elm_lang$core$Native_Utils.eq(base.numMissiles, 0) ? _elm_lang$core$Maybe$Just('OUT') : ((_elm_lang$core$Native_Utils.cmp(base.numMissiles, 3) < 1) ? _elm_lang$core$Maybe$Just('LOW') : _elm_lang$core$Maybe$Nothing)) : _elm_lang$core$Maybe$Nothing;
+	});
+var _user$project$View$baseCaption = F2(
+	function (model, base) {
+		var text = A2(_user$project$View$baseCaptionText, model, base);
+		var _p1 = text;
+		if (_p1.ctor === 'Just') {
+			return _elm_lang$core$Native_List.fromArray(
+				[
+					A2(
+					_elm_lang$svg$Svg$text$,
+					_elm_lang$core$Native_List.fromArray(
+						[
+							_elm_lang$svg$Svg_Attributes$x(
+							_elm_lang$core$Basics$toString(base.position.x)),
+							_elm_lang$svg$Svg_Attributes$y(
+							_elm_lang$core$Basics$toString(base.position.y + 50)),
+							_elm_lang$svg$Svg_Attributes$textAnchor('middle'),
+							_elm_lang$svg$Svg_Attributes$fill('blue')
+						]),
+					_elm_lang$core$Native_List.fromArray(
+						[
+							_elm_lang$svg$Svg$text(_p1._0)
+						]))
+				]);
+		} else {
+			return _elm_lang$core$Native_List.fromArray(
+				[]);
+		}
+	});
 var _user$project$View$viewMissile = function (missile) {
 	return A2(
 		_elm_lang$svg$Svg$line,
@@ -9499,8 +9586,8 @@ var _user$project$View$viewMissile = function (missile) {
 			[]));
 };
 var _user$project$View$baseColour = function (base) {
-	var _p1 = base.numMissiles;
-	if (_p1 === 0) {
+	var _p2 = base.numMissiles;
+	if (_p2 === 0) {
 		return 'grey';
 	} else {
 		return 'blue';
@@ -9526,9 +9613,9 @@ var _user$project$View$translatePoints = F3(
 	function (x1, y1, points) {
 		return A2(
 			_elm_lang$core$List$map,
-			function (_p2) {
-				var _p3 = _p2;
-				return {ctor: '_Tuple2', _0: _p3._0 + x1, _1: _p3._1 + y1};
+			function (_p3) {
+				var _p4 = _p3;
+				return {ctor: '_Tuple2', _0: _p4._0 + x1, _1: _p4._1 + y1};
 			},
 			points);
 	});
@@ -9537,31 +9624,51 @@ var _user$project$View$pointListAtPosition = F3(
 		var points$ = A3(_user$project$View$translatePoints, x1, y1, points);
 		var points$$ = A2(
 			_elm_lang$core$List$map,
-			function (_p4) {
-				var _p5 = _p4;
+			function (_p5) {
+				var _p6 = _p5;
 				return A2(
 					_elm_lang$core$Basics_ops['++'],
-					_elm_lang$core$Basics$toString(_p5._0),
+					_elm_lang$core$Basics$toString(_p6._0),
 					A2(
 						_elm_lang$core$Basics_ops['++'],
 						',',
-						_elm_lang$core$Basics$toString(_p5._1)));
+						_elm_lang$core$Basics$toString(_p6._1)));
 			},
 			points$);
 		return A2(_elm_lang$core$String$join, ' ', points$$);
 	});
 var _user$project$View$cityPoints = _elm_lang$core$Native_List.fromArray(
 	[
-		{ctor: '_Tuple2', _0: -20, _1: 0},
-		{ctor: '_Tuple2', _0: -20, _1: -10},
-		{ctor: '_Tuple2', _0: -18, _1: -10},
-		{ctor: '_Tuple2', _0: -18, _1: -3},
-		{ctor: '_Tuple2', _0: -15, _1: -3},
-		{ctor: '_Tuple2', _0: -15, _1: -15},
-		{ctor: '_Tuple2', _0: -10, _1: -15},
-		{ctor: '_Tuple2', _0: -10, _1: -3},
-		{ctor: '_Tuple2', _0: 20, _1: -3},
-		{ctor: '_Tuple2', _0: 20, _1: 0}
+		{ctor: '_Tuple2', _0: -28, _1: -4},
+		{ctor: '_Tuple2', _0: -24, _1: -4},
+		{ctor: '_Tuple2', _0: -24, _1: -12},
+		{ctor: '_Tuple2', _0: -20, _1: -12},
+		{ctor: '_Tuple2', _0: -20, _1: -8},
+		{ctor: '_Tuple2', _0: -16, _1: -8},
+		{ctor: '_Tuple2', _0: -16, _1: -4},
+		{ctor: '_Tuple2', _0: -12, _1: -4},
+		{ctor: '_Tuple2', _0: -12, _1: -12},
+		{ctor: '_Tuple2', _0: -8, _1: -12},
+		{ctor: '_Tuple2', _0: -8, _1: -8},
+		{ctor: '_Tuple2', _0: -4, _1: -8},
+		{ctor: '_Tuple2', _0: -4, _1: -12},
+		{ctor: '_Tuple2', _0: 0, _1: -12},
+		{ctor: '_Tuple2', _0: 0, _1: -20},
+		{ctor: '_Tuple2', _0: 4, _1: -20},
+		{ctor: '_Tuple2', _0: 4, _1: -16},
+		{ctor: '_Tuple2', _0: 8, _1: -16},
+		{ctor: '_Tuple2', _0: 8, _1: -8},
+		{ctor: '_Tuple2', _0: 12, _1: -8},
+		{ctor: '_Tuple2', _0: 12, _1: -4},
+		{ctor: '_Tuple2', _0: 16, _1: -4},
+		{ctor: '_Tuple2', _0: 16, _1: -12},
+		{ctor: '_Tuple2', _0: 20, _1: -12},
+		{ctor: '_Tuple2', _0: 20, _1: -8},
+		{ctor: '_Tuple2', _0: 24, _1: -8},
+		{ctor: '_Tuple2', _0: 24, _1: -4},
+		{ctor: '_Tuple2', _0: 28, _1: -4},
+		{ctor: '_Tuple2', _0: 28, _1: 0},
+		{ctor: '_Tuple2', _0: -28, _1: 0}
 	]);
 var _user$project$View$cityAtPosition = F2(
 	function (x1, y1) {
@@ -9586,11 +9693,17 @@ var _user$project$View$viewCity = function (city) {
 var _user$project$View$scoreCity = F2(
 	function (pos, city) {
 		var y = 200;
-		var x = 300 + (pos * 50);
+		var x = 310 + (pos * 60);
 		return A2(_user$project$View$renderCity, x, y);
 	});
 var _user$project$View$viewScoredCities = function (model) {
-	return A2(_elm_lang$core$List$indexedMap, _user$project$View$scoreCity, model.citiesScored);
+	return (_elm_lang$core$Native_Utils.cmp(
+		_elm_lang$core$List$length(model.citiesScored),
+		0) > 0) ? A2(
+		_elm_lang$core$List_ops['::'],
+		_user$project$View$cityBonusScore(model),
+		A2(_elm_lang$core$List$indexedMap, _user$project$View$scoreCity, model.citiesScored)) : _elm_lang$core$Native_List.fromArray(
+		[]);
 };
 var _user$project$View$missileStorageLocations = _elm_lang$core$Native_List.fromArray(
 	[
@@ -9624,9 +9737,9 @@ var _user$project$View$missileAtPosition = F2(
 	function (x1, y1) {
 		return A3(_user$project$View$pointListAtPosition, x1, y1, _user$project$View$missilePoints);
 	});
-var _user$project$View$renderMissile = function (_p6) {
-	var _p7 = _p6;
-	var p = A2(_user$project$View$missileAtPosition, _p7._0, _p7._1);
+var _user$project$View$renderMissile = function (_p7) {
+	var _p8 = _p7;
+	var p = A2(_user$project$View$missileAtPosition, _p8._0, _p8._1);
 	return A2(
 		_elm_lang$svg$Svg$polygon,
 		_elm_lang$core$Native_List.fromArray(
@@ -9637,50 +9750,64 @@ var _user$project$View$renderMissile = function (_p6) {
 		_elm_lang$core$Native_List.fromArray(
 			[]));
 };
-var _user$project$View$renderBase = function (base) {
-	var caption = _user$project$View$baseCaption(base);
-	var locations = A3(
-		_user$project$View$translatePoints,
-		base.position.x,
-		base.position.y,
-		A2(_elm_lang$core$List$take, base.numMissiles, _user$project$View$missileStorageLocations));
-	return A2(
-		_elm_lang$svg$Svg$g,
-		_elm_lang$core$Native_List.fromArray(
-			[]),
-		A2(
-			_elm_lang$core$Basics_ops['++'],
-			A2(_elm_lang$core$List$map, _user$project$View$renderMissile, locations),
-			caption));
-};
+var _user$project$View$renderBase = F2(
+	function (model, base) {
+		var caption = A2(_user$project$View$baseCaption, model, base);
+		var locations = A3(
+			_user$project$View$translatePoints,
+			base.position.x,
+			base.position.y,
+			A2(_elm_lang$core$List$take, base.numMissiles, _user$project$View$missileStorageLocations));
+		return A2(
+			_elm_lang$svg$Svg$g,
+			_elm_lang$core$Native_List.fromArray(
+				[]),
+			A2(
+				_elm_lang$core$Basics_ops['++'],
+				A2(_elm_lang$core$List$map, _user$project$View$renderMissile, locations),
+				caption));
+	});
 var _user$project$View$scoreMissile = F2(
-	function (pos, _p8) {
-		var y = 100;
-		var x = 300 + (pos * 10);
+	function (pos, _p9) {
+		var y = 140;
+		var x = 290 + (pos * 10);
 		return _user$project$View$renderMissile(
 			{ctor: '_Tuple2', _0: x, _1: y});
 	});
 var _user$project$View$viewScoredMissiles = function (model) {
-	return A2(
-		_elm_lang$core$List$indexedMap,
-		_user$project$View$scoreMissile,
-		A2(_elm_lang$core$List$repeat, model.missilesScored, 1));
+	return (_elm_lang$core$Native_Utils.cmp(model.missilesScored, 0) > 0) ? A2(
+		_elm_lang$core$List_ops['::'],
+		_user$project$View$missileBonusScore(model),
+		A2(
+			_elm_lang$core$List$indexedMap,
+			_user$project$View$scoreMissile,
+			A2(_elm_lang$core$List$repeat, model.missilesScored, 1))) : _elm_lang$core$Native_List.fromArray(
+		[]);
+};
+var _user$project$View$viewBonusPoints = function (model) {
+	return _elm_lang$core$List$concat(
+		_elm_lang$core$Native_List.fromArray(
+			[
+				_user$project$View$viewBonusMessage,
+				_user$project$View$viewScoredCities(model),
+				_user$project$View$viewScoredMissiles(model)
+			]));
 };
 var _user$project$View$viewEndLevel = function (model) {
 	return _elm_lang$core$List$concat(
 		_elm_lang$core$Native_List.fromArray(
 			[
-				_user$project$View$viewScoredCities(model),
-				_user$project$View$viewScoredMissiles(model)
+				_user$project$View$viewBonusPoints(model),
+				_user$project$View$viewContinueMessage
 			]));
 };
 var _user$project$View$viewState = function (model) {
-	var _p9 = model.state;
-	switch (_p9.ctor) {
-		case 'Intro':
-			return _user$project$View$viewIntro;
-		case 'LevelIntro':
-			return _user$project$View$viewStartLevel(model);
+	var _p10 = model.state;
+	switch (_p10.ctor) {
+		case 'StartScreen':
+			return _user$project$View$viewStartScreen(model);
+		case 'BonusPoints':
+			return _user$project$View$viewBonusPoints(model);
 		case 'LevelEnd':
 			return _user$project$View$viewEndLevel(model);
 		case 'GameOver':
@@ -9708,8 +9835,8 @@ var _user$project$View$viewGame = function (model) {
 				_elm_lang$svg$Svg_Attributes$class('game-background'),
 				_elm_lang$svg$Svg_Attributes$x('0px'),
 				_elm_lang$svg$Svg_Attributes$y('0px'),
-				_elm_lang$svg$Svg_Attributes$width('800'),
-				_elm_lang$svg$Svg_Attributes$height('400'),
+				_elm_lang$svg$Svg_Attributes$width('100%'),
+				_elm_lang$svg$Svg_Attributes$height('100%'),
 				_elm_lang$svg$Svg_Attributes$fill('black'),
 				A2(
 				_elm_lang$html$Html_Events$on,
@@ -9723,7 +9850,10 @@ var _user$project$View$viewGame = function (model) {
 			[
 				_elm_lang$core$Native_List.fromArray(
 				[svgBackground, _user$project$View$viewGround]),
-				A2(_elm_lang$core$List$map, _user$project$View$renderBase, model.bases),
+				A2(
+				_elm_lang$core$List$map,
+				_user$project$View$renderBase(model),
+				model.bases),
 				A2(_elm_lang$core$List$map, _user$project$View$viewCity, model.cities),
 				A2(_elm_lang$core$List$map, _user$project$View$viewMissile, model.missiles),
 				A2(_elm_lang$core$List$map, _user$project$View$viewMissile, model.nukes),
